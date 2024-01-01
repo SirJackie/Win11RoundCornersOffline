@@ -274,7 +274,6 @@ int main(int argc, char** argv)
             _getch();
             return 8;
         }
-		//????
         strcat_s(
             szOriginalDWM,
             MAX_PATH,
@@ -297,7 +296,7 @@ int main(int argc, char** argv)
     }
 
 	/*
-	** Create dwm.exe
+	** Kill dwm.exe
 	*/
     STARTUPINFO si = { sizeof(si) };
     PROCESS_INFORMATION pi;
