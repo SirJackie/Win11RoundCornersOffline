@@ -156,7 +156,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Win11DisableRoundedCorners.c" />
+    <ClCompile Include="Win11DisableRoundedCorners.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />

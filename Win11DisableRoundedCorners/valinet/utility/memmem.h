@@ -9,7 +9,7 @@ void* memmem(void* haystack, size_t haystacklen, void* needle, size_t needlelen)
     const char* pattern = (const char*)needle;
     const char* rv = NULL;
 
-    size_t* out = calloc(needlelen, sizeof(size_t));
+    size_t* out = (size_t*)calloc(needlelen, sizeof(size_t));
     if (!out)
     {
         return NULL;
@@ -50,6 +50,6 @@ void* memmem(void* haystack, size_t haystacklen, void* needle, size_t needlelen)
     }
 
     free(out);
-    return rv;
+    return (void*)rv;
 }
 #endif
