@@ -1,7 +1,6 @@
 #include <Windows.h>
 #include <conio.h>
 #include <iostream>
-#define _CRT_SECURE_NO_WARNINGS
 
 extern "C" {
 #include <valinet/pdb/pdb.h>
@@ -56,7 +55,7 @@ void KillDWM() {
 		CREATE_UNICODE_ENVIRONMENT,
 		NULL,
 		NULL,
-		&si,
+		reinterpret_cast<LPSTARTUPINFOA> (&si),
 		&pi
 	);
 	WaitForSingleObject(pi.hProcess, INFINITE);
@@ -222,6 +221,8 @@ int main(int argc, char** argv)
             return 9;
         }
 
+		// ----- LPTSTR Charset Problem Start -----
+
 		char xxx[MAX_PATH];
 		ZeroMemory(
 			xxx,
@@ -239,28 +240,27 @@ int main(int argc, char** argv)
             _getch();
             return 8;
         }
-        strcat_s(
-			(char*)szOriginalDWM.c_str(),
-            MAX_PATH,
-            "1"
-        );  // szOriginalDWM = "C:\\Windows\\system32\\uDWM_win11drc.bak1"
-        DeleteFileA((LPCSTR)szOriginalDWM.c_str());  // Delete if existed: "C:\\Windows\\system32\\uDWM_win11drc.bak1"
-        if (!MoveFileA(szDWM, (LPCSTR)szOriginalDWM.c_str()))  // Backup "C:\\Windows\\system32\\uDWM.dll" as "C:\\Windows\\system32\\uDWM_win11drc.bak1"
+
+		// ----- LPTSTR Charset Problem End -----
+
+		szOriginalDWM = AskSysDir() + "\\uDWM_win11drc.bak1";
+        DeleteFileA((LPCSTR)szOriginalDWM.c_str());  // Delete if existed: System32\uDWM_win11drc.bak1
+        if (!MoveFileA((LPCSTR)szDWM.c_str(), (LPCSTR)szOriginalDWM.c_str()))  // Rename System32\uDWM.dll as System32\uDWM_win11drc.bak1
         {
             printf("Unable to prepare for replacing system file.\n");
             _getch();
             return 9;
         }
-        if (!CopyFileA(szModifiedDWM, szDWM, FALSE))  // Patch "C:\\Users\\Windows To Go\\Desktop\\Win11DisableRoundedCorners\\x64\\Debug\\uDWM.dll" to "C:\\Windows\\system32\\uDWM.dll"
+        if (!CopyFileA((LPCSTR)szModifiedDWM.c_str(), (LPCSTR)szDWM.c_str(), FALSE))  // Patch CWD\uDWM.dll to System32\uDWM.dll
         {
             printf("Unable to replace system file.\n");
             _getch();
             return 10;
         }
-        DeleteFileA(szModifiedDWM);  // Delete: "C:\\Users\\Windows To Go\\Desktop\\Win11DisableRoundedCorners\\x64\\Debug\\uDWM.dll"
+        DeleteFileA((LPCSTR)szModifiedDWM.c_str());  // Delete: CWD\uDWM.dll
 
 		KillDWM();
-		DeleteFileA((LPCSTR)szOriginalDWM.c_str());  // delete "C:\\Windows\\system32\\uDWM_win11drc.bak1"
+		DeleteFileA((LPCSTR)szOriginalDWM.c_str());  // Delete System32\uDWM_win11drc.bak1
     }
 
     std::cout << "Operation successful." << std::endl;
