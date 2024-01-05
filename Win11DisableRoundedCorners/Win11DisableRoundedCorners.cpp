@@ -244,7 +244,7 @@ int main(int argc, char** argv)
 			_getch();
 		}
 
-        if (Helper::CopyTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWM_win11drc.bak"))  // Rename: System32\\uDWM.dll => System32\uDWM_win11drc.bak
+        if (!Helper::CopyTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWM_win11drc.bak"))  // Rename: System32\\uDWM.dll => System32\uDWM_win11drc.bak
         {
             printf("Unable to backup system file.\n");
             _getch();
