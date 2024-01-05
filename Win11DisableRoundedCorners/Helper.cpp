@@ -57,10 +57,10 @@ void Helper::KillDWM() {
 	);
 	WaitForSingleObject(pi.hProcess, INFINITE);
 
-	// Sleep 10000ms
-	printf("\n");
-	for (int i = 0; i < 10; i++) {
-		Sleep(1000);
+	// Sleep 2000ms
+	printf("Patching: ");
+	for (int i = 0; i < 80; i++) {
+		Sleep(25);
 		printf(".");
 	}
 	printf("\n");

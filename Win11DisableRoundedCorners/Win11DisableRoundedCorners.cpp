@@ -144,9 +144,11 @@ int main(int argc, char** argv)
 	}
 
     std::cout << "Operation successful." << std::endl;
-	std::cout << "Win11RoundCornersOffline.exe is a modification of Win11DisableOrRestoreRoundedCorners.exe," << std::endl
-		<< "which supports offline patching without the Internet." << std::endl
-		<< "View source code on: https://github.com/SirJackie/Win11RoundCornersOffline" << std::endl;
+	std::cout << "--------------------------------------------------" << std::endl;
+	std::cout << "Win11RoundCornersOffline.exe is a tool to disable " << std::endl
+		<< "round corners in Windows 11 without Internet connection." << std::endl
+		<< "View source code on: https://github.com/SirJackie/Win11RoundCornersOffline" << std::endl
+		<< "Press any key to exit..." << std::endl;
 
 	_getch();
 }
