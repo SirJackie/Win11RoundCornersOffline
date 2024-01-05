@@ -8,130 +8,132 @@ extern "C" {
 #include <valinet/utility/takeown.h>
 }
 
-std::string AskSysDir() {
-	char sysDir[MAX_PATH];
-	ZeroMemory(
-		sysDir,
-		(MAX_PATH) * sizeof(char)
-	);
-	GetSystemDirectoryA(
-		sysDir,
-		MAX_PATH
-	);  // sysDir = C:\Windows\System32
-	return std::string(sysDir);
-}
-
-std::string AskCWD() {
-	char cwd[_MAX_PATH];
-	ZeroMemory(
-		cwd,
-		(_MAX_PATH) * sizeof(char)
-	);
-	GetModuleFileNameA(
-		GetModuleHandle(NULL),
-		cwd,
-		_MAX_PATH
-	);
-	PathRemoveFileSpecA(cwd);
-	// modFn => C:\Users\Windows To Go\Desktop\Win11DisableRoundedCorners\x64\Debug
-	return std::string(cwd);
-}
-
-int FileExists(std::string file) {
-	return fileExists((char*)file.c_str());
-}
-
-void KillDWM() {
-	std::string szTaskkill = "\"" + AskSysDir() + "\\taskkill.exe\" /f /im dwm.exe";  // "C:\Windows\system32\taskkill.exe\" /f /im dwm.exe
-
-	STARTUPINFO si = { sizeof(si) };
-	PROCESS_INFORMATION pi;
-	BOOL b = CreateProcessA(
-		NULL,
-		(LPSTR)szTaskkill.c_str(),
-		NULL,
-		NULL,
-		TRUE,
-		CREATE_UNICODE_ENVIRONMENT,
-		NULL,
-		NULL,
-		reinterpret_cast<LPSTARTUPINFOA> (&si),
-		&pi
-	);
-	WaitForSingleObject(pi.hProcess, INFINITE);
-	Sleep(10000);
-}
-
-std::string DownloadSymbol(std::string dllFilename) {
-	// Input: CWD\uDWM.dll
-	// Effect: Download and Create CWD\uDWM.pdb
-	// Output: CWD\uDWM.pdb
-
-	char dllFn[_MAX_PATH];
-	ZeroMemory(
-		dllFn,
-		(_MAX_PATH) * sizeof(char)
-	);
-	strcpy(dllFn, dllFilename.c_str());  // dllFn = CWD\uDWM.dll
-
-	// Download: CWD\uDWM.pdb
-	// Side Effect: Setting dllFn to CWD\uDWM.pdb
-	if (VnDownloadSymbols(
-		NULL,
-		dllFn,
-		dllFn,
-		_MAX_PATH
-	))
-	{
-		printf(
-			"Unable to download symbols. Make sure you have a working Internet "
-			"connection.\n"
+class Helper {
+public:
+	static std::string AskSysDir() {
+		char sysDir[MAX_PATH];
+		ZeroMemory(
+			sysDir,
+			(MAX_PATH) * sizeof(char)
 		);
-		_getch();
+		GetSystemDirectoryA(
+			sysDir,
+			MAX_PATH
+		);  // sysDir = C:\Windows\System32
+		return std::string(sysDir);
 	}
-	return std::string(dllFn);  // Output: CWD\uDWM.pdb
-}
+
+	static std::string AskCWD() {
+		char cwd[_MAX_PATH];
+		ZeroMemory(
+			cwd,
+			(_MAX_PATH) * sizeof(char)
+		);
+		GetModuleFileNameA(
+			GetModuleHandle(NULL),
+			cwd,
+			_MAX_PATH
+		);
+		PathRemoveFileSpecA(cwd);
+		// modFn => C:\Users\Windows To Go\Desktop\Win11DisableRoundedCorners\x64\Debug
+		return std::string(cwd);
+	}
+
+	static int FileExists(std::string file) {
+		return fileExists((char*)file.c_str());
+	}
+
+	static void KillDWM() {
+		std::string szTaskkill = "\"" + AskSysDir() + "\\taskkill.exe\" /f /im dwm.exe";  // "C:\Windows\system32\taskkill.exe\" /f /im dwm.exe
+
+		STARTUPINFO si = { sizeof(si) };
+		PROCESS_INFORMATION pi;
+		BOOL b = CreateProcessA(
+			NULL,
+			(LPSTR)szTaskkill.c_str(),
+			NULL,
+			NULL,
+			TRUE,
+			CREATE_UNICODE_ENVIRONMENT,
+			NULL,
+			NULL,
+			reinterpret_cast<LPSTARTUPINFOA> (&si),
+			&pi
+		);
+		WaitForSingleObject(pi.hProcess, INFINITE);
+		Sleep(10000);
+	}
+
+	static std::string DownloadSymbol(std::string dllFilename) {
+		// Input: CWD\uDWM.dll
+		// Effect: Download and Create CWD\uDWM.pdb
+		// Output: CWD\uDWM.pdb
+
+		char dllFn[_MAX_PATH];
+		ZeroMemory(
+			dllFn,
+			(_MAX_PATH) * sizeof(char)
+		);
+		strcpy(dllFn, dllFilename.c_str());  // dllFn = CWD\uDWM.dll
+
+		// Download: CWD\uDWM.pdb
+		// Side Effect: Setting dllFn to CWD\uDWM.pdb
+		if (VnDownloadSymbols(
+			NULL,
+			dllFn,
+			dllFn,
+			_MAX_PATH
+		))
+		{
+			printf(
+				"Unable to download symbols. Make sure you have a working Internet "
+				"connection.\n"
+			);
+			_getch();
+		}
+		return std::string(dllFn);  // Output: CWD\uDWM.pdb
+	}
+
+	static void DeleteTheFile(std::string filename) {
+		DeleteFileA((LPCSTR)filename.c_str());
+	}
+
+	static BOOL MoveTheFile(std::string src, std::string dst) {
+		return MoveFileA((LPCSTR)src.c_str(), (LPCSTR)dst.c_str());
+	}
+};
 
 int main(int argc, char** argv)
 {
-
-    BOOL bRestore = FALSE;
-
-	std::string szOriginalDWM = AskSysDir() + "\\uDWM_win11drc.bak";  // System32\uDWM_win11drc.bak
-	std::string szDWM = AskSysDir() + "\\uDWM.dll";  // System32\uDWM.dll
-
 	/*
 	** Determine Patch/Restore
 	*/
-    bRestore = FileExists(szOriginalDWM);  // Patch: 0, Restore: 1
+    BOOL bRestore = Helper::FileExists(Helper::AskSysDir() + "\\uDWM_win11drc.bak");  // Patch: 0, Restore: 1
 
-	// Get String: szModifiedDWM
-	std::string szModifiedDWM;
-	// RESTORE MODE: System32\uDWMm.dll
-    if (bRestore) szModifiedDWM = AskSysDir() + "\\uDWMm.dll";  // 
-	// PATCH MODE: CWD\uDWM.dll
-	else szModifiedDWM = AskCWD() + "\\uDWM.dll";
+	std::string szOriginalDWM = Helper::AskSysDir() + "\\uDWM_win11drc.bak";  // System32\uDWM_win11drc.bak
+	std::string szDWM = Helper::AskSysDir() + "\\uDWM.dll";  // System32\uDWM.dll
+	std::string szModifiedDWM = bRestore ? Helper::AskSysDir() + "\\uDWMm.dll" : Helper::AskCWD() + "\\uDWM.dll";  // RESTORE MODE: System32\uDWMm.dll; PATCH MODE: CWD\uDWM.dll
 
 	/*
 	** RESTORE MODE
 	*/
     if (bRestore)
     {
-        DeleteFileA((LPCSTR)szModifiedDWM.c_str());  // Delete System32\uDWMm.dll
-        if (!MoveFileA((LPCSTR)szDWM.c_str(), (LPCSTR)szModifiedDWM.c_str()))  // Rename: System32\uDWM.dll => System32\uDWMm.dll
+		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWMm.dll");  // Delete System32\uDWMm.dll
+        if (!Helper::MoveTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWMm.dll"))  // Rename: System32\uDWM.dll => System32\uDWMm.dll
         {
             printf("Unable to restore DWM.\n");
             _getch();
             return 1;
         }
-        if (!MoveFileA((LPCSTR)szOriginalDWM.c_str(), (LPCSTR)szDWM.c_str()))  // Rename: System32\uDWM_win11drc.bak => System32\uDWM.dll
+        if (!Helper::MoveTheFile(Helper::AskSysDir() + "\\uDWM_win11drc.bak", Helper::AskSysDir() + "\\uDWM.dll"))  // Rename: System32\uDWM_win11drc.bak => System32\uDWM.dll
         {
             printf("Unable to restore DWM.\n");
             _getch();
             return 2;
         }
-		KillDWM();  // Taskkill dwm.exe
-		DeleteFileA((LPCSTR)szModifiedDWM.c_str());  // Delete: System32\uDWMm.dll
+		Helper::KillDWM();  // Taskkill dwm.exe
+		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWMm.dll");  // Delete: System32\uDWMm.dll
     }
 
 	/*
@@ -149,7 +151,7 @@ int main(int argc, char** argv)
             return 1;
         }
         
-		std::string pdbFileName = DownloadSymbol(szModifiedDWM);
+		std::string pdbFileName = Helper::DownloadSymbol(szModifiedDWM);
 
 		/*
 		** ----- Start Patching DLL using PDB File -----
@@ -243,7 +245,7 @@ int main(int argc, char** argv)
 
 		// ----- LPTSTR Charset Problem End -----
 
-		szOriginalDWM = AskSysDir() + "\\uDWM_win11drc.bak1";
+		szOriginalDWM = Helper::AskSysDir() + "\\uDWM_win11drc.bak1";
         DeleteFileA((LPCSTR)szOriginalDWM.c_str());  // Delete if existed: System32\uDWM_win11drc.bak1
         if (!MoveFileA((LPCSTR)szDWM.c_str(), (LPCSTR)szOriginalDWM.c_str()))  // Rename System32\uDWM.dll as System32\uDWM_win11drc.bak1
         {
@@ -259,7 +261,7 @@ int main(int argc, char** argv)
         }
         DeleteFileA((LPCSTR)szModifiedDWM.c_str());  // Delete: CWD\uDWM.dll
 
-		KillDWM();
+		Helper::KillDWM();
 		DeleteFileA((LPCSTR)szOriginalDWM.c_str());  // Delete System32\uDWM_win11drc.bak1
     }
 
