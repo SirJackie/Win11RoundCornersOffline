@@ -51,7 +51,7 @@ int main(int argc, char** argv)
 
 		/*
 		** Bypass System Restrictions and Delete: System32\uDWM.dll
-		** 1. Take Ownership & Taskkill dwm.exe
+		** 1. Take Ownership
 		** 2. uDWM.dll cannot be directly deleted, so:
 		**    a) rename: uDWM.dll => uDWM_tmp.dll
 		**    b) delete: uDWM_tmp.dll
@@ -144,4 +144,9 @@ int main(int argc, char** argv)
 	}
 
     std::cout << "Operation successful." << std::endl;
+	std::cout << "Win11RoundCornersOffline.exe is a modification of Win11DisableOrRestoreRoundedCorners.exe," << std::endl
+		<< "which supports offline patching without the Internet." << std::endl
+		<< "View source code on: https://github.com/SirJackie/Win11RoundCornersOffline" << std::endl;
+
+	_getch();
 }

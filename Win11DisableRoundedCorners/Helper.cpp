@@ -56,7 +56,14 @@ void Helper::KillDWM() {
 		&pi
 	);
 	WaitForSingleObject(pi.hProcess, INFINITE);
-	Sleep(10000);
+
+	// Sleep 10000ms
+	printf("\n");
+	for (int i = 0; i < 10; i++) {
+		Sleep(1000);
+		printf(".");
+	}
+	printf("\n");
 }
 
 std::string Helper::DownloadSymbol(std::string dllFilename) {
