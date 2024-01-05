@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cassert>
 #include "Helper.h"
 
 int main(int argc, char** argv)
@@ -10,15 +11,15 @@ int main(int argc, char** argv)
 
 	std::string szOriginalDWM = Helper::AskSysDir() + "\\uDWM_win11drc.bak";  // System32\uDWM_win11drc.bak
 	std::string szDWM = Helper::AskSysDir() + "\\uDWM.dll";  // System32\uDWM.dll
-	std::string szModifiedDWM = bRestore ? Helper::AskSysDir() + "\\uDWMm.dll" : Helper::AskCWD() + "\\uDWM.dll";  // RESTORE MODE: System32\uDWMm.dll; PATCH MODE: CWD\uDWM.dll
+	std::string szModifiedDWM = bRestore ? Helper::AskSysDir() + "\\uDWM_tmp.dll" : Helper::AskCWD() + "\\uDWM.dll";  // RESTORE MODE: System32\uDWM_tmp.dll; PATCH MODE: CWD\uDWM.dll
 
 	/*
 	** RESTORE MODE
 	*/
     if (bRestore)
     {
-		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWMm.dll");  // Delete System32\uDWMm.dll
-        if (!Helper::MoveTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWMm.dll"))  // Rename: System32\uDWM.dll => System32\uDWMm.dll
+		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_tmp.dll");  // Delete System32\uDWM_tmp.dll
+        if (!Helper::MoveTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWM_tmp.dll"))  // Rename: System32\uDWM.dll => System32\uDWM_tmp.dll
         {
             printf("Unable to restore DWM.\n");
             _getch();
@@ -29,7 +30,7 @@ int main(int argc, char** argv)
             _getch();
         }
 		Helper::KillDWM();  // Taskkill dwm.exe
-		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWMm.dll");  // Delete: System32\uDWMm.dll
+		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_tmp.dll");  // Delete: System32\uDWM_tmp.dll
     }
 
 	/*
@@ -46,7 +47,17 @@ int main(int argc, char** argv)
             _getch();
         }
         
-		std::string pdbFileName = Helper::DownloadSymbol(Helper::AskSysDir() + "\\uDWM.dll");
+		// Get PDB File
+		std::string pdbFileName = Helper::AskCWD() + "\\uDWM.pdb";
+
+		if (Helper::FileExists(pdbFileName)) {
+			printf("uDWM.pdb already existed, no need to download.\n");
+		}
+		else {
+			printf("uDWM.pdb not found, downloading from the Internet.....\n");
+			std::string pdbDownloadedFileName = Helper::DownloadSymbol(Helper::AskCWD() + "\\uDWM.dll");
+			assert(pdbDownloadedFileName == pdbFileName);
+		}
 
 		// Patch DLL using PDB File
 		if (!Helper::Patch_uDWM_dll(Helper::AskCWD() + "\\uDWM.dll", pdbFileName)) {
@@ -67,8 +78,8 @@ int main(int argc, char** argv)
 			_getch();
 		}
 
-        Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_win11drc.bak1");  // Delete if existed: System32\uDWM_win11drc.bak1
-        if (!Helper::MoveTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWM_win11drc.bak1"))  // Rename System32\uDWM.dll as System32\uDWM_win11drc.bak1
+        Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_tmp.dll");  // Delete if existed: System32\uDWM_tmp.dll
+        if (!Helper::MoveTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWM_tmp.dll"))  // Rename System32\uDWM.dll as System32\uDWM_tmp.dll
         {
             printf("Unable to prepare for replacing system file.\n");
             _getch();
@@ -82,7 +93,7 @@ int main(int argc, char** argv)
         Helper::DeleteTheFile(Helper::AskCWD() + "\\uDWM.dll");  // Delete: CWD\uDWM.dll
 
 		Helper::KillDWM();
-		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_win11drc.bak1");  // Delete System32\uDWM_win11drc.bak1
+		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_tmp.dll");  // Delete System32\uDWM_tmp.dll
     }
 
     std::cout << "Operation successful." << std::endl;

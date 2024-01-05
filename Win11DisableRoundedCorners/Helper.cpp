@@ -147,9 +147,6 @@ BOOL Helper::Patch_uDWM_dll(std::string dll, std::string pdb) {
 	}
 	printf("Function address is: 0x%x.\n", addr[0]);
 
-	// Delete: CWD\uDWM.pdb
-	Helper::DeleteTheFile(pdb);
-
 	// Patch: CWD\uDWM.dll
 	HANDLE hFile = CreateFileA(
 		(LPCSTR)dll.c_str(),
