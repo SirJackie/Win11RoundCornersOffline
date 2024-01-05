@@ -258,13 +258,13 @@ int main(int argc, char** argv)
 		}
 
         Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_win11drc.bak1");  // Delete if existed: System32\uDWM_win11drc.bak1
-        if (!Helper::MoveTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWM_win11drc.bak"))  // Rename System32\uDWM.dll as System32\uDWM_win11drc.bak1
+        if (!Helper::MoveTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWM_win11drc.bak1"))  // Rename System32\uDWM.dll as System32\uDWM_win11drc.bak1
         {
             printf("Unable to prepare for replacing system file.\n");
             _getch();
             return 9;
         }
-        if (!CopyFileA((LPCSTR)szModifiedDWM.c_str(), (LPCSTR)szDWM.c_str(), FALSE))  // Patch CWD\uDWM.dll to System32\uDWM.dll
+        if (!Helper::CopyTheFile(Helper::AskCWD() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWM.dll"))  // Patch CWD\uDWM.dll to System32\uDWM.dll
         {
             printf("Unable to replace system file.\n");
             _getch();
