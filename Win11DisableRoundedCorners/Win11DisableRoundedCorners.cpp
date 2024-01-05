@@ -7,38 +7,22 @@ int main(int argc, char** argv)
 	/*
 	** Determine Patch/Restore
 	*/
-    BOOL bRestore = Helper::FileExists(Helper::AskSysDir() + "\\uDWM_win11drc.bak");  // Patch: 0, Restore: 1
 
-	std::string szOriginalDWM = Helper::AskSysDir() + "\\uDWM_win11drc.bak";  // System32\uDWM_win11drc.bak
-	std::string szDWM = Helper::AskSysDir() + "\\uDWM.dll";  // System32\uDWM.dll
-	std::string szModifiedDWM = bRestore ? Helper::AskSysDir() + "\\uDWM_tmp.dll" : Helper::AskCWD() + "\\uDWM.dll";  // RESTORE MODE: System32\uDWM_tmp.dll; PATCH MODE: CWD\uDWM.dll
-
-	/*
-	** RESTORE MODE
-	*/
-    if (bRestore)
-    {
-		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_tmp.dll");  // Delete System32\uDWM_tmp.dll
-        if (!Helper::MoveTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWM_tmp.dll"))  // Rename: System32\uDWM.dll => System32\uDWM_tmp.dll
-        {
-            printf("Unable to restore DWM.\n");
-            _getch();
-        }
-        if (!Helper::MoveTheFile(Helper::AskSysDir() + "\\uDWM_win11drc.bak", Helper::AskSysDir() + "\\uDWM.dll"))  // Rename: System32\uDWM_win11drc.bak => System32\uDWM.dll
-        {
-            printf("Unable to restore DWM.\n");
-            _getch();
-        }
-		Helper::KillDWM();  // Taskkill dwm.exe
-		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_tmp.dll");  // Delete: System32\uDWM_tmp.dll
-    }
+	// If patching-backup doesn't existed, do the patching.
+    BOOL needPatch = !Helper::FileExists(Helper::AskSysDir() + "\\uDWM_win11drc.bak");
 
 	/*
 	** PATCH MODE
 	*/
-    else
+
+	if (needPatch)
     {
-        if (!Helper::CopyTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskCWD() + "\\uDWM.dll"))  // Copy£ºSystem32\uDWM.dll => CWD\uDWM.dll
+		/*
+		** Generate Patched DLL: CWD\uDWM.dll
+		*/
+
+		// Copy£ºSystem32\uDWM.dll => CWD\uDWM.dll
+        if (!Helper::CopyTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskCWD() + "\\uDWM.dll"))
         {
             printf(
                 "Temporary file copy failed. Make sure the application has write "
@@ -47,7 +31,7 @@ int main(int argc, char** argv)
             _getch();
         }
         
-		// Get PDB File
+		// Make Sure PDB File Exist: CWD\uDWM.pdb
 		std::string pdbFileName = Helper::AskCWD() + "\\uDWM.pdb";
 
 		if (Helper::FileExists(pdbFileName)) {
@@ -59,13 +43,23 @@ int main(int argc, char** argv)
 			assert(pdbDownloadedFileName == pdbFileName);
 		}
 
-		// Patch DLL using PDB File
+		// Patch CWD\uDWM.dll using CWD\uDWM.pdb
 		if (!Helper::Patch_uDWM_dll(Helper::AskCWD() + "\\uDWM.dll", pdbFileName)) {
 			printf("Failed to patch uDWM.dll.\n");
 			_getch();
 		}
 
-        if (!Helper::CopyTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWM_win11drc.bak"))  // Rename: System32\\uDWM.dll => System32\uDWM_win11drc.bak
+		/*
+		** Bypass System Restrictions and Delete: System32\uDWM.dll
+		** 1. Take Ownership & Taskkill dwm.exe
+		** 2. uDWM.dll cannot be directly deleted, so:
+		**    a) rename: uDWM.dll => uDWM_tmp.dll
+		**    b) delete: uDWM_tmp.dll
+		** 3. Save a backup for later restore: uDWM_win11drc.bak
+		*/
+
+		// Copy: System32\\uDWM.dll => System32\uDWM_win11drc.bak
+        if (!Helper::CopyTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWM_win11drc.bak"))
         {
             printf("Unable to backup system file.\n");
             _getch();
@@ -78,23 +72,68 @@ int main(int argc, char** argv)
 			_getch();
 		}
 
-        Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_tmp.dll");  // Delete if existed: System32\uDWM_tmp.dll
-        if (!Helper::MoveTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWM_tmp.dll"))  // Rename System32\uDWM.dll as System32\uDWM_tmp.dll
+		// Delete if existed: System32\uDWM_tmp.dll
+        Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_tmp.dll");
+
+		// Rename: System32\uDWM.dll => System32\uDWM_tmp.dll
+        if (!Helper::MoveTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWM_tmp.dll"))
         {
             printf("Unable to prepare for replacing system file.\n");
             _getch();
             return 9;
         }
+
+		// Taskkill dwm.exe to unoccupy the file
+		Helper::KillDWM();
+
+		// Delete System32\uDWM_tmp.dll
+		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_tmp.dll");
+
+		/*
+		** Patch the Generated uDWM.dll
+		*/
+
+		// Copy: CWD\uDWM.dll => System32\uDWM.dll
         if (!Helper::CopyTheFile(Helper::AskCWD() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWM.dll"))  // Patch CWD\uDWM.dll to System32\uDWM.dll
         {
             printf("Unable to replace system file.\n");
             _getch();
         }
-        Helper::DeleteTheFile(Helper::AskCWD() + "\\uDWM.dll");  // Delete: CWD\uDWM.dll
 
-		Helper::KillDWM();
-		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_tmp.dll");  // Delete System32\uDWM_tmp.dll
+		// Delete: CWD\uDWM.dll
+        Helper::DeleteTheFile(Helper::AskCWD() + "\\uDWM.dll");
+
+		
     }
+
+	/*
+	** RESTORE MODE
+	*/
+	else
+	{
+		// Delete:  System32\uDWM_tmp.dll
+		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_tmp.dll");
+
+		// Rename: System32\uDWM.dll => System32\uDWM_tmp.dll
+		if (!Helper::MoveTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWM_tmp.dll"))
+		{
+			printf("Unable to restore DWM.\n");
+			_getch();
+		}
+
+		// Rename: System32\uDWM_win11drc.bak => System32\uDWM.dll
+		if (!Helper::MoveTheFile(Helper::AskSysDir() + "\\uDWM_win11drc.bak", Helper::AskSysDir() + "\\uDWM.dll"))
+		{
+			printf("Unable to restore DWM.\n");
+			_getch();
+		}
+
+		// Taskkill dwm.exe
+		Helper::KillDWM();
+
+		// Delete: System32\uDWM_tmp.dll
+		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_tmp.dll");
+	}
 
     std::cout << "Operation successful." << std::endl;
 }
