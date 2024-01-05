@@ -83,9 +83,6 @@ int main(int argc, char** argv)
             return 9;
         }
 
-		// Taskkill dwm.exe to unoccupy the file
-		Helper::KillDWM();
-
 		// Delete System32\uDWM_tmp.dll
 		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_tmp.dll");
 
@@ -103,7 +100,11 @@ int main(int argc, char** argv)
 		// Delete: CWD\uDWM.dll
         Helper::DeleteTheFile(Helper::AskCWD() + "\\uDWM.dll");
 
-		
+		/*
+		** Refresh DWM by Killing dwm.exe. (it will start automatically)
+		*/
+
+		Helper::KillDWM();
     }
 
 	/*
@@ -111,6 +112,10 @@ int main(int argc, char** argv)
 	*/
 	else
 	{
+		/*
+		** Recover uDWM.dll from uDWM_win11drc.bak
+		*/
+
 		// Delete:  System32\uDWM_tmp.dll
 		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_tmp.dll");
 
@@ -128,11 +133,14 @@ int main(int argc, char** argv)
 			_getch();
 		}
 
-		// Taskkill dwm.exe
-		Helper::KillDWM();
-
 		// Delete: System32\uDWM_tmp.dll
 		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_tmp.dll");
+
+		/*
+		** Refresh DWM by Killing dwm.exe. (it will start automatically)
+		*/
+
+		Helper::KillDWM();
 	}
 
     std::cout << "Operation successful." << std::endl;
