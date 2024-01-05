@@ -35,7 +35,6 @@ public:
 			_MAX_PATH
 		);
 		PathRemoveFileSpecA(cwd);
-		// modFn => C:\Users\Windows To Go\Desktop\Win11DisableRoundedCorners\x64\Debug
 		return std::string(cwd);
 	}
 
@@ -101,6 +100,95 @@ public:
 	static BOOL MoveTheFile(std::string src, std::string dst) {
 		return MoveFileA((LPCSTR)src.c_str(), (LPCSTR)dst.c_str());
 	}
+	
+	static BOOL CopyTheFile(std::string src, std::string dst) {
+		return CopyFileA((LPCSTR)src.c_str(), (LPCSTR)dst.c_str(), FALSE);
+	}
+
+	static wchar_t* StdString2WideCharArray(std::string str) {
+		// This Function Allocate Extra Memory, Remember to delete[] it!!!
+		char chartmp[MAX_PATH];
+		ZeroMemory(
+			chartmp,
+			(MAX_PATH) * sizeof(char)
+		);
+		strcpy(chartmp, str.c_str());
+
+		int num = MultiByteToWideChar(0, 0, chartmp, -1, NULL, 0);
+		wchar_t* widetmp = new wchar_t[num];
+		MultiByteToWideChar(0, 0, chartmp, -1, widetmp, num);
+
+		return widetmp;
+	}
+
+	static BOOL TakeOwnership(std::string filename) {
+		wchar_t* sysDWMPath_Wide = Helper::StdString2WideCharArray(filename);  // Convert to UNICODE
+
+		BOOL result = VnTakeOwnership(sysDWMPath_Wide);
+		
+		delete[] sysDWMPath_Wide;
+		sysDWMPath_Wide = nullptr;
+
+		return result;
+	}
+
+	static BOOL Patch_uDWM_dll(std::string dll, std::string pdb) {
+
+		BOOL success = TRUE;
+
+		// Get Function Address in PDB File
+		DWORD addr[1] = { 0 };
+		char* name[1] = { "CTopLevelWindow::GetEffectiveCornerStyle" };
+		if (VnGetSymbols(
+			(LPCSTR)pdb.c_str(),
+			addr,
+			name,
+			1
+		))
+		{
+			printf("Unable to determine function address.\n");
+			success = FALSE;
+		}
+		printf("Function address is: 0x%x.\n", addr[0]);
+
+		// Delete: CWD\uDWM.pdb
+		Helper::DeleteTheFile(pdb);
+
+		// Patch: CWD\uDWM.dll
+		HANDLE hFile = CreateFileA(
+			(LPCSTR)dll.c_str(),
+			GENERIC_READ | GENERIC_WRITE,
+			FILE_SHARE_READ,
+			NULL,
+			OPEN_EXISTING,
+			FILE_ATTRIBUTE_NORMAL,
+			0
+		);
+		if (!hFile)
+		{
+			printf("Unable to open system file.\n");
+			success = FALSE;
+		}
+		HANDLE hFileMapping = CreateFileMapping(hFile, NULL, PAGE_READWRITE, 0, 0, NULL);
+		if (hFileMapping == 0)
+		{
+			printf("Unable to create file mapping.\n");
+			success = FALSE;
+		}
+		char* lpFileBase = (char*)MapViewOfFile(hFileMapping, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+		if (lpFileBase == 0)
+		{
+			printf("Unable to memory map system file.\n");
+			success = FALSE;
+		}
+		char szPayload[8] = { 0x48, 0xC7, 0xC0, 0x00, 0x00, 0x00, 0x00, 0xc3 }; // mov rax, 0; ret
+		memcpy(lpFileBase + addr[0], szPayload, sizeof(szPayload));
+		UnmapViewOfFile(lpFileBase);
+		CloseHandle(hFileMapping);
+		CloseHandle(hFile);
+
+		return success;
+	}
 };
 
 int main(int argc, char** argv)
@@ -124,13 +212,11 @@ int main(int argc, char** argv)
         {
             printf("Unable to restore DWM.\n");
             _getch();
-            return 1;
         }
         if (!Helper::MoveTheFile(Helper::AskSysDir() + "\\uDWM_win11drc.bak", Helper::AskSysDir() + "\\uDWM.dll"))  // Rename: System32\uDWM_win11drc.bak => System32\uDWM.dll
         {
             printf("Unable to restore DWM.\n");
             _getch();
-            return 2;
         }
 		Helper::KillDWM();  // Taskkill dwm.exe
 		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWMm.dll");  // Delete: System32\uDWMm.dll
@@ -141,113 +227,38 @@ int main(int argc, char** argv)
 	*/
     else
     {
-        if (!CopyFileA((LPCSTR)szDWM.c_str(), (LPCSTR)szModifiedDWM.c_str(), FALSE))  // Copy£ºSystem32\uDWM.dll => CWD\uDWM.dll
+        if (!Helper::CopyTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskCWD() + "\\uDWM.dll"))  // Copy£ºSystem32\uDWM.dll => CWD\uDWM.dll
         {
             printf(
                 "Temporary file copy failed. Make sure the application has write "
                 "access to the folder it runs from.\n"
             );
             _getch();
-            return 1;
         }
         
-		std::string pdbFileName = Helper::DownloadSymbol(szModifiedDWM);
+		std::string pdbFileName = Helper::DownloadSymbol(Helper::AskSysDir() + "\\uDWM.dll");
 
-		/*
-		** ----- Start Patching DLL using PDB File -----
-		*/
+		// Patch DLL using PDB File
+		if (!Helper::Patch_uDWM_dll(Helper::AskCWD() + "\\uDWM.dll", pdbFileName)) {
+			printf("Failed to patch uDWM.dll.\n");
+			_getch();
+		}
 
-		// Get Function Address in PDB File
-        DWORD addr[1] = { 0 };
-        char* name[1] = { "CTopLevelWindow::GetEffectiveCornerStyle" };
-        if (VnGetSymbols(
-            (LPCSTR)pdbFileName.c_str(),
-            addr,
-            name,
-            1
-        ))
-        {
-            printf("Unable to determine function address.\n");
-            _getch();
-            return 3;
-        }
-		printf("Function address is: 0x%x.\n", addr[0]);
-
-		// Delete: CWD\uDWM.pdb
-        DeleteFileA((LPCSTR)pdbFileName.c_str());
-
-        // Patch: CWD\uDWM.dll
-        HANDLE hFile = CreateFileA(
-			(LPCSTR)szModifiedDWM.c_str(),
-            GENERIC_READ | GENERIC_WRITE,
-            FILE_SHARE_READ,
-            NULL,
-            OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL,
-            0
-        );
-        if (!hFile)
-        {
-            printf("Unable to open system file.\n");
-            _getch();
-            return 4;
-        }
-        HANDLE hFileMapping = CreateFileMapping(hFile, NULL, PAGE_READWRITE, 0, 0, NULL);
-        if (hFileMapping == 0)
-        {
-            printf("Unable to create file mapping.\n");
-            _getch();
-            return 5;
-        }
-        char* lpFileBase = (char*)MapViewOfFile(hFileMapping, FILE_MAP_ALL_ACCESS, 0, 0, 0);
-        if (lpFileBase == 0)
-        {
-            printf("Unable to memory map system file.\n");
-            _getch();
-            return 6;
-        }
-        char szPayload[8] = { 0x48, 0xC7, 0xC0, 0x00, 0x00, 0x00, 0x00, 0xc3}; // mov rax, 0; ret
-        memcpy(lpFileBase + addr[0], szPayload, sizeof(szPayload));
-        UnmapViewOfFile(lpFileBase);
-        CloseHandle(hFileMapping);
-        CloseHandle(hFile);  // Finished patching the file: C:\User\\Windows To Go\Desktop\Win11DisableRoundedCorners\x64\Debug\uDWM.dll
-
-		/*
-		** ----- Finish Patching DLL using PDB File -----
-		*/
-
-        if (!CopyFileA((LPCSTR)szDWM.c_str(), (LPCSTR)szOriginalDWM.c_str(), FALSE))  // Rename: System32\\uDWM.dll => System32\uDWM_win11drc.bak
+        if (Helper::CopyTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWM_win11drc.bak"))  // Rename: System32\\uDWM.dll => System32\uDWM_win11drc.bak
         {
             printf("Unable to backup system file.\n");
             _getch();
-            return 9;
         }
 
-		// ----- LPTSTR Charset Problem Start -----
+		// Take Ownership: System32\uDWM.dll
+		if (!Helper::TakeOwnership(Helper::AskSysDir() + "\\uDWM.dll"))
+		{
+			printf("Unable to take ownership of system file.\n");
+			_getch();
+		}
 
-		char xxx[MAX_PATH];
-		ZeroMemory(
-			xxx,
-			(MAX_PATH) * sizeof(char)
-		);
-		strcpy(xxx, szDWM.c_str());
-
-		int num = MultiByteToWideChar(0, 0, xxx, -1, NULL, 0);
-		wchar_t* wide = new wchar_t[num];
-		MultiByteToWideChar(0, 0, xxx, -1, wide, num);
-
-        if (!VnTakeOwnership(wide))  // TAKE OWNERSHIP: System32\uDWM.dll
-        {
-            printf("Unable to take ownership of system file.\n");
-            _getch();
-            return 8;
-        }
-
-		// ----- LPTSTR Charset Problem End -----
-
-		szOriginalDWM = Helper::AskSysDir() + "\\uDWM_win11drc.bak1";
-        DeleteFileA((LPCSTR)szOriginalDWM.c_str());  // Delete if existed: System32\uDWM_win11drc.bak1
-        if (!MoveFileA((LPCSTR)szDWM.c_str(), (LPCSTR)szOriginalDWM.c_str()))  // Rename System32\uDWM.dll as System32\uDWM_win11drc.bak1
+        Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_win11drc.bak1");  // Delete if existed: System32\uDWM_win11drc.bak1
+        if (!Helper::MoveTheFile(Helper::AskSysDir() + "\\uDWM.dll", Helper::AskSysDir() + "\\uDWM_win11drc.bak"))  // Rename System32\uDWM.dll as System32\uDWM_win11drc.bak1
         {
             printf("Unable to prepare for replacing system file.\n");
             _getch();
@@ -257,12 +268,11 @@ int main(int argc, char** argv)
         {
             printf("Unable to replace system file.\n");
             _getch();
-            return 10;
         }
-        DeleteFileA((LPCSTR)szModifiedDWM.c_str());  // Delete: CWD\uDWM.dll
+        Helper::DeleteTheFile(Helper::AskCWD() + "\\uDWM.dll");  // Delete: CWD\uDWM.dll
 
 		Helper::KillDWM();
-		DeleteFileA((LPCSTR)szOriginalDWM.c_str());  // Delete System32\uDWM_win11drc.bak1
+		Helper::DeleteTheFile(Helper::AskSysDir() + "\\uDWM_win11drc.bak1");  // Delete System32\uDWM_win11drc.bak1
     }
 
     std::cout << "Operation successful." << std::endl;
