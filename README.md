@@ -1,19 +1,22 @@
 # Win11RoundCornersOffline
 
-`Win11RoundCornersOffline.exe` is a tool to disable round corners in Windows 11 without Internet connection.
+`Win11RoundCornersOffline.exe` is a tool to disable round corners in Windows 11 without an Internet connection.
 
 And `Win11RoundCornersOffline.exe` is a modification of `Win11DisableOrRestoreRoundedCorners.exe`, which supports offline patching without the Internet.
 
-Check original version on: https://github.com/valinet/Win11DisableRoundedCorners
+> The original version of `Win11DisableOrRestoreRoundedCorners.exe` was developed by Valentin Radu (https://github.com/valinet), which was a marvelous work!
+>
+> Without the original version, this version is not possible to come out. A great thank you to Valentin for providing such a marvelous train of thought and implementing the program in pure-C in concise code.
+>
+> Check out the original version at: https://github.com/valinet/Win11DisableRoundedCorners
+>
 
 Here are the 3 most important changes compared to the original version:
-1. Cache the `pdb` file for next-time usage instead of directly deleting it afterwards. In this way, offline patching becomes possible.
+1. Cache the `pdb` file for next-time usage instead of directly deleting it afterward. In this way, offline patching becomes possible.
 2. Modified `uDWMm.dll` to `uDWM_tmp.dll`, and `uDWM_win11drc.bak1` to `uDWM_tmp.dll`, which made the code more readable (using the same name for two same usages instead of 2 unrelated name)
-3. Fully rewrote from C to C++, greatly shortened the code and promoted readability.
+3. Fully rewrote from C to C++, greatly shortened the code, and promoted readability.
 
-<hr>
-
-Original Version's Readme:
+## Original Version's Readme
 
 A simple utility that cold patches the Desktop Window Manager (uDWM.dll) in order to disable window rounded corners in Windows 11. Tested on build 22000.194.
 
