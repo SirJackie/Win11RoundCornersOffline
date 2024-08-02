@@ -16,6 +16,12 @@ Here are the 3 most important changes compared to the original version:
 2. Modified `uDWMm.dll` to `uDWM_tmp.dll`, and `uDWM_win11drc.bak1` to `uDWM_tmp.dll`, which made the code more readable (using the same name for two same usages instead of 2 unrelated name)
 3. Fully rewrote from C to C++, greatly shortened the code, and promoted readability.
 
+> For Chinese Users：
+>
+> Warning: DO NOT USE CHINESE CHARACTERS IN THE PATH OF THIS PROGRAM, UNICODE PATH WILL CAUSE PROGRAM TO FAIL!
+>
+> 注意！路径不要有中文或空格，否则失败！
+
 ## Original Version's Readme
 
 A simple utility that cold patches the Desktop Window Manager (uDWM.dll) in order to disable window rounded corners in Windows 11. Tested on build 22000.194.
